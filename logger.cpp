@@ -242,15 +242,15 @@ std::wstring logger::get_app_path(const std::wstring& modify_extension)
 	wchar_t module_file[XEEKWORX_MAX_PATH] = {};
 
 #ifdef __APPLE__
-	char buffer[XENO_MAX_PATH];
+	char buffer[XEEKWORX_MAX_PATH];
 	uint32_t size = sizeof(buffer);
 	_NSGetExecutablePath(buffer, &size);
 	wcsncpy(module_file, to_unicode(buffer).c_str(), wcslen(buffer));
 #elif _WIN32
 	::GetModuleFileNameW(0, module_file, XEEKWORX_MAX_PATH);
 #else
-	char buffer[XENO_MAX_PATH] = {};
-	size_t count = readlink("/proc/self/exe", buffer, XENO_MAX_PATH);
+	char buffer[XEEKWORX_MAX_PATH] = {};
+	size_t count = readlink("/proc/self/exe", buffer, XEEKWORX_MAX_PATH);
 	wcsncpy(module_file, to_unicode(buffer).c_str(), count);
 #endif
 
