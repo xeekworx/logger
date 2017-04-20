@@ -1,4 +1,4 @@
-![Xeekworx](http://xeekworx.com/images/github/xeekworx_logo.png)
+![Xeekworx](http://xeekworx.com/images/github/xeekworx_logo.png) <br />
 Logger
 ===========
 **Logger is a single header/source class that you can easily include with your C/C++ project that gives you flexible logging capabilities with an iostream like syntax.**
@@ -11,4 +11,3 @@ First, you must include *"logger.h"*.
 
 To be continued ...
 
-> Written with [StackEdit](https://stackedit.io/).
