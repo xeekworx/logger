@@ -1,5 +1,5 @@
 // The MIT License (MIT)
-// Copyright (C) 2016 John A. Tullos. All rights reserved.
+// Copyright (C) 2017 John A. Tullos. All rights reserved.
 // Website: http://wwww.xeekworx.com/
 // Author E-mail: xeek@xeekworx.com
 //
@@ -21,19 +21,23 @@
 #pragma warning(disable : 4275) // std::ios_base warning when exporting some things in STL, msdn says ignore.
 #include <sstream> // std::wostringstream
 #include <fstream> // std::wofstream
+#include <map>
+#include <thread>
+#include <mutex> // std::mutex & std::lock_guard for thread safety
 
 #define LOGSTAMP xeekworx::logger::create_stamp(__FILEW__, __FUNCTIONW__, __LINE__)
 
 namespace xeekworx {
 
-	enum  logtype { ERR = 0, EMPTY, NOTICE, DEBUG, INFO, WARNING };
+	enum  logtype { FATAL = -1, ERR = 0, EMPTY, NOTICE, DEBUG, DEBUG2, DEBUG3, INFO, WARNING };
 	struct logstamp { std::wstring file, function; long line; };
 
 	class logger {
 	public:
+		std::mutex logging_mutex;
 		struct version_t { unsigned int major, minor, revision; };
 		// Note: Before Visual Studio Update 2 this would cause an "illegal indirection" error.
-		static constexpr version_t version = version_t { 1, 16, 54 };
+		static constexpr version_t version = version_t { 1, 17, 428 };
 
 		struct config {
 			bool enable;
@@ -51,13 +55,18 @@ namespace xeekworx {
 		};
 
 	private:
+		struct log_state {
+			log_state() : current_logtype(NOTICE) {}
+			std::wostringstream stream;
+			logstamp current_logstamp;
+			logtype current_logtype;
+		};
+
 		static const wchar_t directory_separator;
 		static const wchar_t path_separator;
 
 		logger::config m_config;
-		logstamp m_current_logstamp;
-		logtype m_current_logtype;
-		std::wostringstream log_stream;
+		std::map<std::thread::id, log_state> log_states;
 		// At some point this may need to change to make this class exportable.
 		// std::wofstream cannot be exported; though this isn't a problem when
 		// this object is private, it still causes several warnings in
@@ -75,14 +84,21 @@ namespace xeekworx {
 		const bool& is_enabled() const { return m_config.enable; }
 
 		template <typename T>
-		logger& operator<<(const T &t) { if(is_enabled()) { log_stream << t; } return *this; }
+		logger& operator<<(const T &t) { 
+			if(is_enabled()) { 
+				std::lock_guard<std::mutex> lock(logging_mutex); // Added for thread safety
+				log_state& state = log_states[std::this_thread::get_id()];
+				state.stream << t;
+			}
+			return *this;
+		}
 		logger& operator<<(std::wostream&(*f)(std::wostream&));
 		logger& operator<<(logtype type);
 		logger& operator<<(logstamp stmp);
 
-		static inline const logstamp& create_stamp(const wchar_t* file, const wchar_t* function, const long line)
+		static inline logstamp create_stamp(const wchar_t* file, const wchar_t* function, const long line)
 		{
-			static logstamp stamp = {};
+			logstamp stamp = {};
 			stamp.file = file;
 			stamp.function = function;
 			stamp.line = line;
@@ -105,5 +121,7 @@ namespace xeekworx {
 	std::wstring to_unicode(const std::string& s);
 	std::string to_multibyte(const std::wstring& s);
 
+#ifndef DISABLE_LOG_OBJECT
 	extern xeekworx::logger log;
+#endif
 }

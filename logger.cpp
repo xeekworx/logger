@@ -1,5 +1,5 @@
 // The MIT License (MIT)
-// Copyright (C) 2016 John A. Tullos. All rights reserved.
+// Copyright (C) 2017 John A. Tullos. All rights reserved.
 // Website: http://wwww.xeekworx.com/
 // Author E-mail: xeek@xeekworx.com
 //
@@ -51,7 +51,7 @@ namespace xeekworx {
 #endif
 }
 
-logger::logger(void) : m_config(logger::default_config()), m_current_logtype(NOTICE)
+logger::logger(void) : m_config(logger::default_config())
 {
 
 }
@@ -91,6 +91,8 @@ void logger::enable(const logger::config& use_config)
 
 void logger::enable(const bool value)
 {
+	std::lock_guard<std::mutex> lock(logging_mutex); // Added for thread safety
+
 	m_config.enable = value;
 
 	if(m_config.enable) {
@@ -110,34 +112,37 @@ void logger::enable(const bool value)
 logger& logger::operator<<(std::wostream&(*f)(std::wostream&))
 {
 	if(is_enabled()) {
+		std::lock_guard<std::mutex> lock(logging_mutex); // Added for thread safety
 		typedef std::basic_ostream<wchar_t>& (*ENDL_T) (std::basic_ostream<wchar_t>&);
 		const ENDL_T l_ENDL(&std::endl);
 
 		if(f == (ENDL_T) std::endl) {
 			std::wostringstream out;
+			
+			log_state& state = log_states[std::this_thread::get_id()];
 
 			// TIME STAMP:
 			if(m_config.enable_timestamp) out << logger::get_timestamp() << L" ";
 
 			// SOURCE FILE:
-			if(m_config.enable_source_fullpath && !m_current_logstamp.file.empty()) out << m_current_logstamp.file << L":";
-			else if(!m_current_logstamp.file.empty()) out << std::setw(18) << std::right << logger::path_filespec(m_current_logstamp.file) << L":";
+			if(m_config.enable_source_fullpath && !state.current_logstamp.file.empty()) out << state.current_logstamp.file << L":";
+			else if(!state.current_logstamp.file.empty()) out << std::setw(18) << std::right << logger::path_filespec(state.current_logstamp.file) << L":";
 
 			// LINE NUMBER:
-			if(m_config.enable_line && m_current_logstamp.line >= 0) out << std::setw(4) << std::right << std::setfill(L'0') << m_current_logstamp.line << L":";
+			if(m_config.enable_line && state.current_logstamp.line >= 0) out << std::setw(4) << std::right << std::setfill(L'0') << state.current_logstamp.line << L":";
 			out << std::setfill(L' ');
 
 			// FUNCTION NAME:
-			if(m_config.enable_function && !m_current_logstamp.function.empty()) {
-				if(m_config.enable_function_full) out << m_current_logstamp.function << L":";
-				else out << std::setw(18) << std::left << remove_function_owners(m_current_logstamp.function);
+			if(m_config.enable_function && !state.current_logstamp.function.empty()) {
+				if(m_config.enable_function_full) out << state.current_logstamp.function << L":";
+				else out << std::setw(18) << std::left << remove_function_owners(state.current_logstamp.function);
 			}
 
 			// LOG TYPE:
-			out << std::setw(7) << std::left << logtype_to_string(m_current_logtype) << L" ";
+			out << std::setw(7) << std::left << logtype_to_string(state.current_logtype) << L" ";
 
 			// THE LAST OF THE ERROR MESSAGE:
-			out << log_stream.str() << std::endl;
+			out << state.stream.str() << std::endl;
 
 			// COLORIZE CONSOLE OUTPUT:
 			// Not available in this version.
@@ -153,8 +158,7 @@ logger& logger::operator<<(std::wostream&(*f)(std::wostream&))
 #endif
 
 			// RESET:
-			log_stream.str(L"");
-			m_current_logtype = NOTICE;
+			log_states.erase(std::this_thread::get_id());
 		}
 	}
 
@@ -163,13 +167,21 @@ logger& logger::operator<<(std::wostream&(*f)(std::wostream&))
 
 logger& logger::operator<<(logtype type)
 {
-	if(is_enabled()) m_current_logtype = type;
+	if (is_enabled()) {
+		std::lock_guard<std::mutex> lock(logging_mutex); // Added for thread safety
+		log_state& state = log_states[std::this_thread::get_id()];
+		state.current_logtype = type;
+	}
 	return *this;
 }
 
 logger& logger::operator<<(logstamp stamp)
 {
-	if(is_enabled()) m_current_logstamp = stamp;
+	if (is_enabled()) {
+		std::lock_guard<std::mutex> lock(logging_mutex); // Added for thread safety
+		log_state& state = log_states[std::this_thread::get_id()];
+		state.current_logstamp = stamp;
+	}
 	return *this;
 }
 
@@ -179,13 +191,16 @@ std::wstring logger::get_version()
 	ss << logger::version.major << L"." << logger::version.minor << L"." << logger::version.revision;
 	return ss.str();
 }
-
+//enum  logtype { FATAL = -1, ERR = 0, EMPTY, NOTICE, DEBUG, DEBUG2, DEBUG3, INFO, WARNING };
 std::wstring logger::logtype_to_string(const logtype type)
 {
 	switch(type) {
+	case FATAL: return L"FATAL";
 	case ERR: return L"ERROR";
 	case NOTICE: return L"NOTICE";
 	case DEBUG: return L"DEBUG";
+	case DEBUG2: return L"DEBUG2";
+	case DEBUG3: return L"DEBUG3";
 	case WARNING: return L"WARNING";
 	case INFO: return L"INFO";
 	default: return L"";
@@ -195,9 +210,12 @@ std::wstring logger::logtype_to_string(const logtype type)
 bool logger::logtype_is_empty(const logtype type)
 {
 	switch(type) {
+	case FATAL:
 	case ERR:
 	case NOTICE:
 	case DEBUG:
+	case DEBUG2:
+	case DEBUG3:
 	case INFO:
 	case WARNING:
 		return false;
