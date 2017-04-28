@@ -75,6 +75,7 @@ logger::config logger::default_config()
 	logger::config config;
 	config.enable = false;
 	config.enable_timestamp = true;
+	config.enable_thread_id = true;
 	config.enable_source_fullpath = false;
 	config.enable_function = true;
 	config.enable_function_full = false;
@@ -135,9 +136,16 @@ logger& logger::operator<<(std::wostream&(*f)(std::wostream&))
 			// TIME STAMP:
 			if(m_config.enable_timestamp) out << logger::get_timestamp() << L" ";
 
+			// THREAD ID:
+			if (m_config.enable_thread_id) {
+				std::wstringstream tmp;
+				tmp << L"T" << state.current_logstamp.thread_id;
+				out << std::setw(7) << std::right << std::setfill(L' ') << tmp.str();
+			}
+
 			// SOURCE FILE:
 			if(m_config.enable_source_fullpath && !state.current_logstamp.file.empty()) out << state.current_logstamp.file << L":";
-			else if(!state.current_logstamp.file.empty()) out << std::setw(18) << std::right << logger::path_filespec(state.current_logstamp.file) << L":";
+			else if(!state.current_logstamp.file.empty()) out << std::setw(20) << std::right << logger::path_filespec(state.current_logstamp.file) << L":";
 
 			// LINE NUMBER:
 			if(m_config.enable_line && state.current_logstamp.line >= 0) out << std::setw(4) << std::right << std::setfill(L'0') << state.current_logstamp.line << L":";

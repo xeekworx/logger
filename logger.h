@@ -30,7 +30,7 @@
 namespace xeekworx {
 
 	enum  logtype { FATAL = -1, ERR = 0, EMPTY, NOTICE, DEBUG, DEBUG2, DEBUG3, INFO, WARNING };
-	struct logstamp { std::wstring file, function; long line; };
+	struct logstamp { std::wstring file, function; long line; std::thread::id thread_id; };
 
 	class logger {
 	public:
@@ -42,6 +42,7 @@ namespace xeekworx {
 		struct config {
 			bool enable;
 			bool enable_timestamp;
+			bool enable_thread_id;
 			bool enable_source_fullpath;
 			bool enable_function;
 			bool enable_function_full;
@@ -103,6 +104,7 @@ namespace xeekworx {
 			stamp.file = file;
 			stamp.function = function;
 			stamp.line = line;
+			stamp.thread_id = std::this_thread::get_id();
 			return stamp;
 		}
 
