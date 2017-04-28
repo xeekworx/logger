@@ -29,6 +29,10 @@
 # include <Windows.h>
 #endif
 
+#ifndef DISABLE_LOG_COLOR
+#include "third-party\rlutil\rlutil.h"
+#endif
+
 using namespace xeekworx;
 
 namespace xeekworx {
@@ -80,6 +84,7 @@ logger::config logger::default_config()
 	config.output_to_cerr = false;
 	config.output_to_vs = false;
 	config.output_to_file = true;
+	config.colorize = true;
 	return config;
 }
 
@@ -103,6 +108,12 @@ void logger::enable(const bool value)
 		if(log_file_stream.is_open() && m_config.file_append && logger::path_exists(file)) {
 			log_file_stream << std::endl;
 		}
+
+#ifndef DISABLE_LOG_COLOR
+		// Set initial console color:
+		rlutil::setColor(rlutil::GREY);
+		rlutil::saveDefaultColor();
+#endif
 	}
 	else {
 		if(log_file_stream.is_open()) log_file_stream.close();
@@ -141,13 +152,47 @@ logger& logger::operator<<(std::wostream&(*f)(std::wostream&))
 			// LOG TYPE:
 			out << std::setw(7) << std::left << logtype_to_string(state.current_logtype) << L" ";
 
+			// OUTPUT AGNOSTIC STUFF NOW:
+			if (m_config.output_to_console) std::wcout << out.str();
+			if (m_config.output_to_cerr) std::wcerr << out.str();
+			if (m_config.output_to_file && log_file_stream.is_open()) log_file_stream << out.str();
+#ifdef _WIN32
+			if (m_config.output_to_vs) {
+				::OutputDebugStringW(out.str().c_str());
+			}
+#endif
+			out.str(std::wstring()); // Reset output so text isn't duplicated
+
 			// THE LAST OF THE ERROR MESSAGE:
 			out << state.stream.str() << std::endl;
 
 			// COLORIZE CONSOLE OUTPUT:
-			// Not available in this version.
+#ifndef DISABLE_LOG_COLOR
+			if (m_config.output_to_console && m_config.colorize) {
+				switch (state.current_logtype) {
+				case FATAL:
+				case ERR:
+					rlutil::setColor(rlutil::LIGHTRED);
+					break;
+				case WARNING:
+					rlutil::setColor(rlutil::YELLOW);
+					break;
+				case DEBUG:
+				case DEBUG2:
+				case DEBUG3:
+					rlutil::setColor(rlutil::WHITE);
+					break;
+				case INFO:
+					rlutil::setColor(rlutil::LIGHTGREEN);
+					break;
+				case NOTICE:
+				default:
+					break;
+				}
+			}
+#endif
 
-			// OUTPUT:
+			// OUTPUT THE REST (Colorized if enabled above):
 			if(m_config.output_to_console) std::wcout << out.str();
 			if(m_config.output_to_cerr) std::wcerr << out.str();
 			if(m_config.output_to_file && log_file_stream.is_open()) log_file_stream << out.str();
@@ -159,6 +204,9 @@ logger& logger::operator<<(std::wostream&(*f)(std::wostream&))
 
 			// RESET:
 			log_states.erase(std::this_thread::get_id());
+#ifndef DISABLE_LOG_COLOR
+			rlutil::resetColor();
+#endif
 		}
 	}
 

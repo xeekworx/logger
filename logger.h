@@ -51,6 +51,7 @@ namespace xeekworx {
 			bool output_to_cerr;
 			bool output_to_vs;
 			bool output_to_file;
+			bool colorize;
 			std::wstring file;
 		};
 
