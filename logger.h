@@ -70,6 +70,7 @@ namespace xeekworx {
 
 		logger::config m_config;
 		std::map<std::thread::id, log_state> log_states;
+		bool m_msgonly;
 		// At some point this may need to change to make this class exportable.
 		// std::wofstream cannot be exported; though this isn't a problem when
 		// this object is private, it still causes several warnings in
@@ -85,6 +86,7 @@ namespace xeekworx {
 		void enable(const bool value = true);
 		void enable(const logger::config& use_config);
 		const bool& is_enabled() const { return m_config.enable; }
+		void set_msgonly(const bool msgonly) { this->m_msgonly = msgonly; }
 
 		template <typename T>
 		logger& operator<<(const T &t) { 

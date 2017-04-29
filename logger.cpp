@@ -55,12 +55,12 @@ namespace xeekworx {
 #endif
 }
 
-logger::logger(void) : m_config(logger::default_config())
+logger::logger(void) : m_config(logger::default_config()), m_msgonly(false)
 {
 
 }
 
-logger::logger(const logger::config& config) : m_config(config)
+logger::logger(const logger::config& config) : m_config(config), m_msgonly(false)
 {
 	enable(config);
 }
@@ -134,43 +134,45 @@ logger& logger::operator<<(std::wostream&(*f)(std::wostream&))
 			
 			log_state& state = log_states[std::this_thread::get_id()];
 
-			// TIME STAMP:
-			if(m_config.enable_timestamp) out << logger::get_timestamp() << L" ";
+			if (m_msgonly) {
+				// TIME STAMP:
+				if (m_config.enable_timestamp) out << logger::get_timestamp() << L" ";
 
-			// THREAD ID:
-			if (m_config.enable_thread_id && state.current_logstamp.thread_id != std::thread::id()) {
-				std::wstringstream tmp;
-				tmp << L"T" << state.current_logstamp.thread_id;
-				out << std::setw(7) << std::right << std::setfill(L' ') << tmp.str() << L" ";
-			}
+				// THREAD ID:
+				if (m_config.enable_thread_id && state.current_logstamp.thread_id != std::thread::id()) {
+					std::wstringstream tmp;
+					tmp << L"T" << state.current_logstamp.thread_id;
+					out << std::setw(7) << std::right << std::setfill(L' ') << tmp.str() << L" ";
+				}
 
-			// SOURCE FILE:
-			if(m_config.enable_source_fullpath && !state.current_logstamp.file.empty()) out << state.current_logstamp.file << L":";
-			else if(!state.current_logstamp.file.empty()) out << std::setw(20) << std::right << logger::path_filespec(state.current_logstamp.file) << L":";
+				// SOURCE FILE:
+				if (m_config.enable_source_fullpath && !state.current_logstamp.file.empty()) out << state.current_logstamp.file << L":";
+				else if (!state.current_logstamp.file.empty()) out << std::setw(20) << std::right << logger::path_filespec(state.current_logstamp.file) << L":";
 
-			// LINE NUMBER:
-			if(m_config.enable_line && state.current_logstamp.line >= 0) out << std::setw(4) << std::right << std::setfill(L'0') << state.current_logstamp.line << L":";
-			out << std::setfill(L' ');
+				// LINE NUMBER:
+				if (m_config.enable_line && state.current_logstamp.line >= 0) out << std::setw(4) << std::right << std::setfill(L'0') << state.current_logstamp.line << L":";
+				out << std::setfill(L' ');
 
-			// FUNCTION NAME:
-			if(m_config.enable_function && !state.current_logstamp.function.empty()) {
-				if(m_config.enable_function_full) out << state.current_logstamp.function << L":";
-				else out << std::setw(18) << std::left << remove_function_owners(state.current_logstamp.function);
-			}
+				// FUNCTION NAME:
+				if (m_config.enable_function && !state.current_logstamp.function.empty()) {
+					if (m_config.enable_function_full) out << state.current_logstamp.function << L":";
+					else out << std::setw(18) << std::left << remove_function_owners(state.current_logstamp.function);
+				}
 
-			// LOG TYPE:
-			if(m_config.enable_type) out << std::setw(7) << std::left << logtype_to_string(state.current_logtype) << L" ";
+				// LOG TYPE:
+				if (m_config.enable_type) out << std::setw(7) << std::left << logtype_to_string(state.current_logtype) << L" ";
 
-			// OUTPUT AGNOSTIC STUFF NOW:
-			if (m_config.output_to_console) std::wcout << out.str();
-			if (m_config.output_to_cerr) std::wcerr << out.str();
-			if (m_config.output_to_file && log_file_stream.is_open()) log_file_stream << out.str();
+				// OUTPUT AGNOSTIC STUFF NOW:
+				if (m_config.output_to_console) std::wcout << out.str();
+				if (m_config.output_to_cerr) std::wcerr << out.str();
+				if (m_config.output_to_file && log_file_stream.is_open()) log_file_stream << out.str();
 #ifdef _WIN32
-			if (m_config.output_to_vs) {
-				::OutputDebugStringW(out.str().c_str());
-			}
+				if (m_config.output_to_vs) {
+					::OutputDebugStringW(out.str().c_str());
+				}
 #endif
-			out.str(std::wstring()); // Reset output so text isn't duplicated
+				out.str(std::wstring()); // Reset output so text isn't duplicated
+			}
 
 			// THE LAST OF THE ERROR MESSAGE:
 			out << state.stream.str() << std::endl;
