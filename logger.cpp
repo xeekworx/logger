@@ -73,13 +73,14 @@ logger::~logger(void)
 logger::config logger::default_config()
 {
 	logger::config config;
-	config.enable = false;
+	config.enable = true;
 	config.enable_timestamp = true;
 	config.enable_thread_id = true;
 	config.enable_source_fullpath = false;
 	config.enable_function = true;
 	config.enable_function_full = false;
 	config.enable_line = true;
+	config.enable_type = true;
 	config.file_append = false;
 	config.output_to_console = true;
 	config.output_to_cerr = false;
@@ -158,7 +159,7 @@ logger& logger::operator<<(std::wostream&(*f)(std::wostream&))
 			}
 
 			// LOG TYPE:
-			out << std::setw(7) << std::left << logtype_to_string(state.current_logtype) << L" ";
+			if(m_config.enable_type) out << std::setw(7) << std::left << logtype_to_string(state.current_logtype) << L" ";
 
 			// OUTPUT AGNOSTIC STUFF NOW:
 			if (m_config.output_to_console) std::wcout << out.str();

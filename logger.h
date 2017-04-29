@@ -47,6 +47,7 @@ namespace xeekworx {
 			bool enable_function;
 			bool enable_function_full;
 			bool enable_line;
+			bool enable_type;
 			bool file_append;
 			bool output_to_console;
 			bool output_to_cerr;
