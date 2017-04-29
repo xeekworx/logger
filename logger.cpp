@@ -137,10 +137,10 @@ logger& logger::operator<<(std::wostream&(*f)(std::wostream&))
 			if(m_config.enable_timestamp) out << logger::get_timestamp() << L" ";
 
 			// THREAD ID:
-			if (m_config.enable_thread_id) {
+			if (m_config.enable_thread_id && state.current_logstamp.thread_id != std::thread::id()) {
 				std::wstringstream tmp;
 				tmp << L"T" << state.current_logstamp.thread_id;
-				out << std::setw(7) << std::right << std::setfill(L' ') << tmp.str();
+				out << std::setw(7) << std::right << std::setfill(L' ') << tmp.str() << L" ";
 			}
 
 			// SOURCE FILE:
