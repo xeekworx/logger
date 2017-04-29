@@ -185,15 +185,15 @@ logger& logger::operator<<(std::wostream&(*f)(std::wostream&))
 				case WARNING:
 					rlutil::setColor(rlutil::YELLOW);
 					break;
-				case DEBUG:
-				case DEBUG2:
-				case DEBUG3:
+				case NOTICE:
 					rlutil::setColor(rlutil::WHITE);
 					break;
 				case INFO:
 					rlutil::setColor(rlutil::LIGHTGREEN);
 					break;
-				case NOTICE:
+				case DEBUG:
+				case DEBUG2:
+				case DEBUG3:
 				default:
 					break;
 				}
