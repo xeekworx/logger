@@ -42,16 +42,16 @@ namespace xeekworx {
 	// Utility variables:
 #ifdef _WIN32
 	constexpr size_t XEEKWORX_MAX_PATH = MAX_PATH;
-	const wchar_t xeekworx::logger::directory_separator = L'\\';
-	const wchar_t xeekworx::logger::path_separator = L';';
+	const char xeekworx::logger::directory_separator = '\\';
+	const char xeekworx::logger::path_separator = ';';
 #elif __APPLE__
 	constexpr size_t XEEKWORX_MAX_PATH = MAXPATHLEN;
-	const wchar_t xeekworx::logger::directory_separator = L'/';
-	const wchar_t xeekworx::logger::path_separator = L';';
+	const char xeekworx::logger::directory_separator = '/';
+	const char xeekworx::logger::path_separator = ';';
 #else
 	constexpr size_t XEEKWORX_MAX_PATH = PATHMAX;
-	const wchar_t xeekworx::logger::directory_separator = L'/';
-	const wchar_t xeekworx::logger::path_separator = L';';
+	const char xeekworx::logger::directory_separator = '/';
+	const char xeekworx::logger::path_separator = ';';
 #endif
 }
 
@@ -104,7 +104,7 @@ void logger::enable(const bool value)
 
 	if(m_config.enable) {
 		// Determine the log file path if given; otherwise put it in the application's folder:
-		std::wstring file = (!m_config.file.empty() ? m_config.file : logger::get_app_path(L".log"));
+		std::string file = (!m_config.file.empty() ? m_config.file : logger::get_app_path(".log"));
 		// Open the log file:
 		log_file_stream.open(file, m_config.file_append ? std::ios_base::app : std::ios_base::trunc);
 		if(log_file_stream.is_open() && m_config.file_append && logger::path_exists(file)) {
@@ -122,56 +122,56 @@ void logger::enable(const bool value)
 	}
 }
 
-logger& logger::operator<<(std::wostream&(*f)(std::wostream&))
+logger& logger::operator<<(std::ostream&(*f)(std::ostream&))
 {
 	if(is_enabled()) {
 		std::lock_guard<std::mutex> lock(logging_mutex); // Added for thread safety
-		typedef std::basic_ostream<wchar_t>& (*ENDL_T) (std::basic_ostream<wchar_t>&);
+		typedef std::basic_ostream<char>& (*ENDL_T) (std::basic_ostream<char>&);
 		const ENDL_T l_ENDL(&std::endl);
 
 		if(f == (ENDL_T) std::endl) {
-			std::wostringstream out;
+			std::ostringstream out;
 			
 			log_state& state = log_states[std::this_thread::get_id()];
 
 			if (!m_msgonly) {
 				// TIME STAMP:
-				if (m_config.enable_timestamp) out << logger::get_timestamp() << L" ";
+				if (m_config.enable_timestamp) out << logger::get_timestamp() << " ";
 
 				// THREAD ID:
 				if (m_config.enable_thread_id && state.current_logstamp.thread_id != std::thread::id()) {
-					std::wstringstream tmp;
-					tmp << L"T" << state.current_logstamp.thread_id;
-					out << std::setw(7) << std::right << std::setfill(L' ') << tmp.str() << L" ";
+					std::stringstream tmp;
+					tmp << "T" << state.current_logstamp.thread_id;
+					out << std::setw(7) << std::right << std::setfill(' ') << tmp.str() << " ";
 				}
 
 				// SOURCE FILE:
-				if (m_config.enable_source_fullpath && !state.current_logstamp.file.empty()) out << state.current_logstamp.file << L":";
-				else if (!state.current_logstamp.file.empty()) out << std::setw(20) << std::right << logger::path_filespec(state.current_logstamp.file) << L":";
+				if (m_config.enable_source_fullpath && !state.current_logstamp.file.empty()) out << state.current_logstamp.file << ":";
+				else if (!state.current_logstamp.file.empty()) out << std::setw(20) << std::right << logger::path_filespec(state.current_logstamp.file) << ":";
 
 				// LINE NUMBER:
-				if (m_config.enable_line && state.current_logstamp.line >= 0) out << std::setw(4) << std::right << std::setfill(L'0') << state.current_logstamp.line << L":";
-				out << std::setfill(L' ');
+				if (m_config.enable_line && state.current_logstamp.line >= 0) out << std::setw(4) << std::right << std::setfill('0') << state.current_logstamp.line << ":";
+				out << std::setfill(' ');
 
 				// FUNCTION NAME:
 				if (m_config.enable_function && !state.current_logstamp.function.empty()) {
-					if (m_config.enable_function_full) out << state.current_logstamp.function << L":";
+					if (m_config.enable_function_full) out << state.current_logstamp.function << ":";
 					else out << std::setw(18) << std::left << remove_function_owners(state.current_logstamp.function);
 				}
 
 				// LOG TYPE:
-				if (m_config.enable_type) out << std::setw(7) << std::left << logtype_to_string(state.current_logtype) << L" ";
+				if (m_config.enable_type) out << std::setw(7) << std::left << logtype_to_string(state.current_logtype) << " ";
 
 				// OUTPUT AGNOSTIC STUFF NOW:
-				if (m_config.output_to_console) std::wcout << out.str();
-				if (m_config.output_to_cerr) std::wcerr << out.str();
+				if (m_config.output_to_console) std::cout << out.str();
+				if (m_config.output_to_cerr) std::cerr << out.str();
 				if (m_config.output_to_file && log_file_stream.is_open()) log_file_stream << out.str();
 #ifdef _WIN32
 				if (m_config.output_to_vs) {
-					::OutputDebugStringW(out.str().c_str());
+					::OutputDebugStringA(out.str().c_str());
 				}
 #endif
-				out.str(std::wstring()); // Reset output so text isn't duplicated
+				out.str(std::string()); // Reset output so text isn't duplicated
 			}
 
 			// THE LAST OF THE ERROR MESSAGE:
@@ -204,12 +204,12 @@ logger& logger::operator<<(std::wostream&(*f)(std::wostream&))
 #endif
 
 			// OUTPUT THE REST (Colorized if enabled above):
-			if(m_config.output_to_console) std::wcout << out.str();
-			if(m_config.output_to_cerr) std::wcerr << out.str();
+			if(m_config.output_to_console) std::cout << out.str();
+			if(m_config.output_to_cerr) std::cerr << out.str();
 			if(m_config.output_to_file && log_file_stream.is_open()) log_file_stream << out.str();
 #ifdef _WIN32
 			if(m_config.output_to_vs) {
-				::OutputDebugStringW(out.str().c_str());
+				::OutputDebugStringA(out.str().c_str());
 			}
 #endif
 
@@ -244,25 +244,25 @@ logger& logger::operator<<(logstamp stamp)
 	return *this;
 }
 
-std::wstring logger::get_version()
+std::string logger::get_version()
 {
-	std::wstringstream ss;
-	ss << logger::version.major << L"." << logger::version.minor << L"." << logger::version.revision;
+	std::stringstream ss;
+	ss << logger::version.major << "." << logger::version.minor << "." << logger::version.revision;
 	return ss.str();
 }
 //enum  logtype { FATAL = -1, ERR = 0, EMPTY, NOTICE, DEBUG, DEBUG2, DEBUG3, INFO, WARNING };
-std::wstring logger::logtype_to_string(const logtype type)
+std::string logger::logtype_to_string(const logtype type)
 {
 	switch(type) {
-	case FATAL: return L"FATAL";
-	case ERR: return L"ERROR";
-	case NOTICE: return L"NOTICE";
-	case DEBUG: return L"DEBUG";
-	case DEBUG2: return L"DEBUG2";
-	case DEBUG3: return L"DEBUG3";
-	case WARNING: return L"WARNING";
-	case INFO: return L"INFO";
-	default: return L"";
+	case FATAL: return "FATA";
+	case ERR: return "ERROR";
+	case NOTICE: return "NOTICE";
+	case DEBUG: return "DEBUG";
+	case DEBUG2: return "DEBUG2";
+	case DEBUG3: return "DEBUG3";
+	case WARNING: return "WARNING";
+	case INFO: return "INFO";
+	default: return "";
 	}
 }
 
@@ -284,16 +284,16 @@ bool logger::logtype_is_empty(const logtype type)
 	}
 }
 
-std::wstring logger::remove_function_owners(const std::wstring function_name)
+std::string logger::remove_function_owners(const std::string function_name)
 {
-	std::wstring::size_type pos = function_name.find_last_of(L':');
-	if(pos == std::wstring::npos) return function_name;
+	std::string::size_type pos = function_name.find_last_of(':');
+	if(pos == std::string::npos) return function_name;
 	else return function_name.substr(pos + 1);
 }
 
-std::wstring logger::get_timestamp()
+std::string logger::get_timestamp()
 {
-	wchar_t timestamp_buffer[_MAX_PATH] = {};
+	char timestamp_buffer[_MAX_PATH] = {};
 	std::time_t now = std::time(NULL);
 	std::tm current_localtime = {};
 	std::tm* current_localtime_ptr = nullptr;
@@ -303,55 +303,50 @@ std::wstring logger::get_timestamp()
 #else
 	current_localtime_ptr = std::localtime(&now);
 #endif
-	std::wcsftime(timestamp_buffer, 32, L"%Y%m%d %H:%M:%S", current_localtime_ptr);
+	std::strftime(timestamp_buffer, 32, "%Y%m%d %H:%M:%S", current_localtime_ptr);
 
-	return std::wstring(timestamp_buffer);
+	return std::string(timestamp_buffer);
 }
 
-bool logger::path_exists(const std::wstring& filepath)
+bool logger::path_exists(const std::string& filepath)
 {
 	struct stat info = {};
-	return stat(to_multibyte(filepath).c_str(), &info) == 0 ? true : false;
+	return stat(filepath.c_str(), &info) == 0 ? true : false;
 }
 
-std::wstring logger::get_app_path(const std::wstring& modify_extension)
+std::string logger::get_app_path(const std::string& modify_extension)
 {
-	wchar_t module_file[XEEKWORX_MAX_PATH] = {};
+	char module_file[XEEKWORX_MAX_PATH] = {};
 
 #ifdef __APPLE__
 	char buffer[XEEKWORX_MAX_PATH];
 	uint32_t size = sizeof(buffer);
 	_NSGetExecutablePath(buffer, &size);
-	wcsncpy(module_file, to_unicode(buffer).c_str(), wcslen(buffer));
+	strncpy(module_file, buffer.c_str(), strlen(buffer));
 #elif _WIN32
-	::GetModuleFileNameW(0, module_file, XEEKWORX_MAX_PATH);
+	::GetModuleFileNameA(0, module_file, XEEKWORX_MAX_PATH);
 #else
 	char buffer[XEEKWORX_MAX_PATH] = {};
 	size_t count = readlink("/proc/self/exe", buffer, XEEKWORX_MAX_PATH);
-	wcsncpy(module_file, to_unicode(buffer).c_str(), count);
+	strncpy(module_file, buffer.c_str(), count);
 #endif
 
-	std::wstring result(module_file);
+	std::string result(module_file);
 	if(modify_extension.length() > 0) {
 		size_t folder_path_end = result.find_last_of(logger::directory_separator);
-		size_t ext_start = result.find_last_of(L".");
-		bool has_period = modify_extension.compare(0, 1, L".") == 0;
-		if(ext_start != std::wstring::npos) result = result.substr(0, ext_start + (has_period ? 0 : 1)) + modify_extension;
-		else result += L"." + (has_period ? modify_extension.substr(1) : modify_extension);
+		size_t ext_start = result.find_last_of(".");
+		bool has_period = modify_extension.compare(0, 1, ".") == 0;
+		if(ext_start != std::string::npos) result = result.substr(0, ext_start + (has_period ? 0 : 1)) + modify_extension;
+		else result += "." + (has_period ? modify_extension.substr(1) : modify_extension);
 	}
 	return result;
 }
 
-std::wstring logger::path_filespec(const std::wstring& filepath)
-{
-	size_t folder_path_end = filepath.find_last_of(logger::directory_separator);
-	if(folder_path_end == std::wstring::npos) return filepath;
-	else { return filepath.substr(folder_path_end + 1); }
-}
-
 std::string logger::path_filespec(const std::string& filepath)
 {
-	return xeekworx::to_multibyte(path_filespec(xeekworx::to_unicode(filepath)));
+	size_t folder_path_end = filepath.find_last_of(logger::directory_separator);
+	if(folder_path_end == std::string::npos) return filepath;
+	else { return filepath.substr(folder_path_end + 1); }
 }
 
 std::wstring xeekworx::to_unicode(const std::string& s)

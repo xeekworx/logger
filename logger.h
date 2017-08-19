@@ -19,25 +19,25 @@
 // DEALINGS IN THE SOFTWARE.
 #pragma once
 #pragma warning(disable : 4275) // std::ios_base warning when exporting some things in STL, msdn says ignore.
-#include <sstream> // std::wostringstream
-#include <fstream> // std::wofstream
+#include <sstream> // std::ostringstream
+#include <fstream> // std::ofstream
 #include <map>
 #include <thread>
 #include <mutex> // std::mutex & std::lock_guard for thread safety
 
-#define LOGSTAMP xeekworx::logger::create_stamp(__FILEW__, __FUNCTIONW__, __LINE__)
+#define LOGSTAMP xeekworx::logger::create_stamp(__FILE__, __FUNCTION__, __LINE__)
 
 namespace xeekworx {
 
 	enum  logtype { FATAL = -1, ERR = 0, EMPTY, NOTICE, DEBUG, DEBUG2, DEBUG3, INFO, WARNING };
-	struct logstamp { std::wstring file, function; long line; std::thread::id thread_id; };
+	struct logstamp { std::string file, function; long line; std::thread::id thread_id; };
 
 	class logger {
 	public:
 		std::mutex logging_mutex;
 		struct version_t { unsigned int major, minor, revision; };
 		// Note: Before Visual Studio Update 2 this would cause an "illegal indirection" error.
-		static constexpr version_t version = version_t { 1, 17, 428 };
+		static constexpr version_t version = version_t { 1, 17, 819 };
 
 		struct config {
 			bool enable;
@@ -54,28 +54,28 @@ namespace xeekworx {
 			bool output_to_vs;
 			bool output_to_file;
 			bool colorize;
-			std::wstring file;
+			std::string file;
 		};
 
 	private:
 		struct log_state {
 			log_state() : current_logtype(NOTICE) {}
-			std::wostringstream stream;
+			std::ostringstream stream;
 			logstamp current_logstamp;
 			logtype current_logtype;
 		};
 
-		static const wchar_t directory_separator;
-		static const wchar_t path_separator;
+		static const char directory_separator;
+		static const char path_separator;
 
 		logger::config m_config;
 		std::map<std::thread::id, log_state> log_states;
 		bool m_msgonly;
 		// At some point this may need to change to make this class exportable.
-		// std::wofstream cannot be exported; though this isn't a problem when
+		// std::ofstream cannot be exported; though this isn't a problem when
 		// this object is private, it still causes several warnings in
 		// Visual Studio.
-		std::wofstream log_file_stream;
+		std::ofstream log_file_stream;
 
 	public:
 		logger(void);
@@ -97,11 +97,11 @@ namespace xeekworx {
 			}
 			return *this;
 		}
-		logger& operator<<(std::wostream&(*f)(std::wostream&));
+		logger& operator<<(std::ostream&(*f)(std::ostream&));
 		logger& operator<<(logtype type);
 		logger& operator<<(logstamp stmp);
 
-		static inline logstamp create_stamp(const wchar_t* file, const wchar_t* function, const long line)
+		static inline logstamp create_stamp(const char* file, const char* function, const long line)
 		{
 			logstamp stamp = {};
 			stamp.file = file;
@@ -111,16 +111,15 @@ namespace xeekworx {
 			return stamp;
 		}
 
-		static std::wstring get_version();
+		static std::string get_version();
 
 	private:
-		static std::wstring logtype_to_string(const logtype type);
+		static std::string logtype_to_string(const logtype type);
 		static bool logtype_is_empty(const logtype type);
-		static std::wstring remove_function_owners(const std::wstring function_name);
-		static std::wstring get_timestamp();
-		static bool path_exists(const std::wstring& path);
-		static std::wstring get_app_path(const std::wstring& modify_extension = std::wstring());
-		static std::wstring path_filespec(const std::wstring& filepath);
+		static std::string remove_function_owners(const std::string function_name);
+		static std::string get_timestamp();
+		static bool path_exists(const std::string& path);
+		static std::string get_app_path(const std::string& modify_extension = std::string());
 		static std::string path_filespec(const std::string& filepath);
 	};
 
