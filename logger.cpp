@@ -140,14 +140,12 @@ logger& logger::operator<<(std::ostream&(*f)(std::ostream&))
 
 				// THREAD ID:
 				if (m_config.enable_thread_id && state.current_logstamp.thread_id != std::thread::id()) {
-					std::stringstream tmp;
-					tmp << "T" << state.current_logstamp.thread_id;
-					out << std::setw(7) << std::right << std::setfill(' ') << tmp.str() << " ";
+					out << "T" << std::setw(7) << std::setfill('0') << std::right << state.current_logstamp.thread_id << " ";
 				}
 
 				// SOURCE FILE:
 				if (m_config.enable_source_fullpath && !state.current_logstamp.file.empty()) out << state.current_logstamp.file << ":";
-				else if (!state.current_logstamp.file.empty()) out << std::setw(20) << std::right << logger::path_filespec(state.current_logstamp.file) << ":";
+				else if (!state.current_logstamp.file.empty()) out << std::setw(20) << std::setfill(' ') << std::right << logger::path_filespec(state.current_logstamp.file) << ":";
 
 				// LINE NUMBER:
 				if (m_config.enable_line && state.current_logstamp.line >= 0) out << std::setw(4) << std::right << std::setfill('0') << state.current_logstamp.line << ":";
