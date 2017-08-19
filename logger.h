@@ -25,6 +25,10 @@
 #include <thread>
 #include <mutex> // std::mutex & std::lock_guard for thread safety
 
+#ifndef _MSC_VER
+#	define __FUNCTION__ __func__
+#endif
+
 #define LOGSTAMP xeekworx::logger::create_stamp(__FILE__, __FUNCTION__, __LINE__)
 
 namespace xeekworx {
