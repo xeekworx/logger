@@ -36,8 +36,11 @@
 using namespace xeekworx;
 
 namespace xeekworx {
+	
+#ifdef XWLOG_ENABLE_GLOBALOBJ
 	// Global logger:
 	xeekworx::logger log;
+#endif
 
 	// Utility variables:
 #ifdef _WIN32

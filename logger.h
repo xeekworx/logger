@@ -130,7 +130,7 @@ namespace xeekworx {
 	std::wstring to_unicode(const std::string& s);
 	std::string to_multibyte(const std::wstring& s);
 
-#ifndef DISABLE_LOG_OBJECT
+#ifdef XWLOG_ENABLE_GLOBALOBJ
 	extern xeekworx::logger log;
 #endif
 }
