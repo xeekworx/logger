@@ -29,7 +29,7 @@
 # include <Windows.h>
 #endif
 
-#ifndef DISABLE_LOG_COLOR
+#ifdef XWLOG_ENABLE_COLORS
 #include "third-party\rlutil\rlutil.h"
 #endif
 
@@ -176,7 +176,7 @@ logger& logger::operator<<(std::ostream&(*f)(std::ostream&))
 			out << state.stream.str() << std::endl;
 
 			// COLORIZE CONSOLE OUTPUT:
-#ifndef DISABLE_LOG_COLOR
+#ifdef XWLOG_ENABLE_COLORS
 			if (m_config.output_to_console && m_config.colorize) {
 				switch (state.current_logtype) {
 				case FATAL:
@@ -213,7 +213,7 @@ logger& logger::operator<<(std::ostream&(*f)(std::ostream&))
 
 			// RESET:
 			log_states.erase(std::this_thread::get_id());
-#ifndef DISABLE_LOG_COLOR
+#ifdef XWLOG_ENABLE_COLORS
 			rlutil::resetColor();
 #endif
 		}
